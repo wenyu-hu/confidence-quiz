@@ -529,6 +529,14 @@ async function endConfidencePhase(qIdx) {
     });
   });
 
+  // Compute answer distribution
+  const distribution = { a: 0, b: 0, c: 0, d: 0, e: 0 };
+  let totalAnswered = 0;
+  snap.forEach(doc => {
+    const ans = doc.data().currentAnswer;
+    if (ans && ans in distribution) { distribution[ans]++; totalAnswered++; }
+  });
+
   await batch.commit();
 
   // Highlight correct answer on host screen
@@ -540,7 +548,7 @@ async function endConfidencePhase(qIdx) {
 
   // After 3 seconds, show leaderboard
   setTimeout(() => {
-    showHostLeaderboard(qIdx);
+    showHostLeaderboard(qIdx, q, distribution, totalAnswered);
   }, 3500);
 }
 
@@ -548,13 +556,39 @@ async function endConfidencePhase(qIdx) {
 // HOST — LEADERBOARD
 // ============================================
 
-async function showHostLeaderboard(qIdx) {
+async function showHostLeaderboard(qIdx, q = null, distribution = null, totalAnswered = 0) {
   await db.collection("games").doc(gamePin).update({ phase: "leaderboard" });
 
   const snap = await db.collection("games").doc(gamePin).collection("players").get();
   const players = [];
   snap.forEach(doc => players.push({ id: doc.id, ...doc.data() }));
   players.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  // Render answer distribution
+  const breakdownEl = document.getElementById("host-answer-breakdown");
+  if (q && distribution) {
+    const letters = ["a", "b", "c", "d", "e"];
+    const colors = { a: "var(--choice-a)", b: "var(--choice-b)", c: "var(--choice-c)", d: "var(--choice-d)", e: "var(--choice-e)" };
+    breakdownEl.innerHTML = `<h4 class="breakdown-title">Answer Distribution</h4>` +
+      letters.map(letter => {
+        const text = q["choice" + letter.toUpperCase()] || "";
+        if (!text) return "";
+        const count = distribution[letter] || 0;
+        const pct = totalAnswered > 0 ? Math.round((count / totalAnswered) * 100) : 0;
+        const isCorrect = letter === q.correct;
+        return `<div class="breakdown-row${isCorrect ? " breakdown-correct" : ""}">
+          <span class="breakdown-letter" style="background:${colors[letter]}">${letter.toUpperCase()}</span>
+          <span class="breakdown-text">${text}</span>
+          <div class="breakdown-bar-wrap">
+            <div class="breakdown-bar" style="width:${pct}%;background:${isCorrect ? "var(--choice-d)" : colors[letter]}"></div>
+          </div>
+          <span class="breakdown-pct">${pct}%&nbsp;(${count})</span>
+          ${isCorrect ? '<span class="breakdown-tick">&#10003;</span>' : ""}
+        </div>`;
+      }).join("");
+  } else {
+    breakdownEl.innerHTML = "";
+  }
 
   renderLeaderboard(players, "host-leaderboard-list");
   showScreen("screen-host-leaderboard");
@@ -867,8 +901,12 @@ async function showPlayerResults(gameData) {
   }
 
   const correctChoice = q.correct.toUpperCase();
-  const correctText = q["choice" + correctChoice.toUpperCase()];
-  correctEl.textContent = `Correct answer: ${correctChoice}) ${q[`choice${correctChoice}`]}`;
+  if (!isCorrect) {
+    correctEl.textContent = `✓ Correct answer: ${correctChoice}) ${q["choice" + correctChoice]}`;
+    correctEl.style.display = "";
+  } else {
+    correctEl.style.display = "none";
+  }
 
   pointsEl.textContent = delta > 0 ? `+${delta} pts` : delta < 0 ? `${delta} pts` : "0 pts";
   pointsEl.className = "result-points " + (delta > 0 ? "positive" : delta < 0 ? "negative" : "zero");
