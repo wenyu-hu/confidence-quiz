@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confidence Quiz</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- ========== 1. HOME ========== -->
+  <div id="screen-home" class="screen active">
+    <div class="home-container">
+      <h1 class="home-title">Confidence Quiz</h1>
+      <p class="home-subtitle">Test your knowledge — and your confidence</p>
+      <div class="home-buttons">
+        <button class="btn btn-host" onclick="showScreen('screen-host-setup')">Host a Game</button>
+        <button class="btn btn-join" onclick="showScreen('screen-player-join')">Join a Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 2. HOST SETUP ========== -->
+  <div id="screen-host-setup" class="screen">
+    <div class="setup-container">
+      <button class="btn-back" onclick="showScreen('screen-home')">&larr; Back</button>
+      <h2>Create Your Quiz</h2>
+      <div class="setup-field">
+        <label>Quiz Title</label>
+        <input type="text" id="quiz-title" placeholder="e.g. Science Trivia" autocomplete="off">
+      </div>
+      <div id="questions-builder"></div>
+      <button class="btn btn-secondary" id="add-question-btn">+ Add Question</button>
+      <div class="setup-actions">
+        <button class="btn btn-host" id="start-game-btn">Start Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 3. HOST LOBBY ========== -->
+  <div id="screen-host-lobby" class="screen">
+    <div class="lobby-container">
+      <h2>Game Lobby</h2>
+      <div class="pin-display">
+        <span class="pin-label">Game PIN</span>
+        <span class="pin-code" id="host-pin-code">----</span>
+      </div>
+      <p class="quiz-title-display" id="lobby-quiz-title"></p>
+      <div class="lobby-players">
+        <h3>Players Joined (<span id="player-count">0</span>)</h3>
+        <div id="player-list" class="player-list"></div>
+      </div>
+      <button class="btn btn-host" id="begin-quiz-btn">Begin Quiz</button>
+    </div>
+  </div>
+
+  <!-- ========== 4. HOST QUESTION VIEW ========== -->
+  <div id="screen-host-question" class="screen">
+    <div class="host-question-container">
+      <div class="host-topbar">
+        <span id="host-q-counter">Question 1 / 5</span>
+        <span id="host-timer" class="host-timer">20</span>
+      </div>
+      <div class="host-question-text" id="host-question-text"></div>
+      <div class="host-choices-grid">
+        <div class="host-choice choice-a"><span class="choice-letter">A</span> <span id="host-choice-a"></span></div>
+        <div class="host-choice choice-b"><span class="choice-letter">B</span> <span id="host-choice-b"></span></div>
+        <div class="host-choice choice-c"><span class="choice-letter">C</span> <span id="host-choice-c"></span></div>
+        <div class="host-choice choice-d"><span class="choice-letter">D</span> <span id="host-choice-d"></span></div>
+      </div>
+      <div class="host-status-bar">
+        <span id="host-answer-count">0 / 0 answered</span>
+        <span id="host-phase-label" class="phase-label">Answer Phase</span>
+      </div>
+      <div class="host-controls">
+        <button class="btn btn-secondary" id="host-end-timer-btn">End Timer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 5. HOST LEADERBOARD ========== -->
+  <div id="screen-host-leaderboard" class="screen">
+    <div class="leaderboard-container">
+      <h2 class="lb-title">Leaderboard</h2>
+      <div id="host-leaderboard-list" class="leaderboard-list"></div>
+      <div class="host-controls">
+        <button class="btn btn-host" id="host-next-q-btn">Next Question</button>
+        <button class="btn btn-danger" id="host-end-game-btn">End Game</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 6. PLAYER JOIN ========== -->
+  <div id="screen-player-join" class="screen">
+    <div class="join-container">
+      <button class="btn-back" onclick="showScreen('screen-home')">&larr; Back</button>
+      <h2>Join a Game</h2>
+      <div class="join-field">
+        <label>Your Name</label>
+        <input type="text" id="player-name-input" placeholder="Enter your name" autocomplete="off" maxlength="20">
+      </div>
+      <div class="join-field">
+        <label>Game PIN</label>
+        <input type="text" id="game-pin-input" placeholder="4-digit PIN" maxlength="4" inputmode="numeric" autocomplete="off">
+      </div>
+      <button class="btn btn-join" id="join-game-btn">Join</button>
+      <p class="join-error hidden" id="join-error"></p>
+    </div>
+  </div>
+
+  <!-- ========== 7. PLAYER LOBBY ========== -->
+  <div id="screen-player-lobby" class="screen">
+    <div class="lobby-container">
+      <h2>Waiting for Host...</h2>
+      <div class="player-info-bar">
+        <span>Name: <strong id="player-lobby-name"></strong></span>
+        <span>PIN: <strong id="player-lobby-pin"></strong></span>
+      </div>
+      <div class="lobby-players">
+        <h3>Players in Lobby</h3>
+        <div id="player-lobby-list" class="player-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 8. PLAYER QUESTION ========== -->
+  <div id="screen-player-question" class="screen">
+    <div class="player-question-container">
+      <div class="player-topbar">
+        <span id="player-q-counter">Question 1 / 5</span>
+        <span id="player-timer" class="player-timer">20</span>
+      </div>
+      <div class="player-question-text" id="player-question-text"></div>
+      <div class="player-choices">
+        <button class="choice-btn choice-a" data-choice="a"><span class="choice-letter">A</span> <span class="choice-text" id="player-choice-a"></span></button>
+        <button class="choice-btn choice-b" data-choice="b"><span class="choice-letter">B</span> <span class="choice-text" id="player-choice-b"></span></button>
+        <button class="choice-btn choice-c" data-choice="c"><span class="choice-letter">C</span> <span class="choice-text" id="player-choice-c"></span></button>
+        <button class="choice-btn choice-d" data-choice="d"><span class="choice-letter">D</span> <span class="choice-text" id="player-choice-d"></span></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 9. PLAYER CONFIDENCE ========== -->
+  <div id="screen-player-confidence" class="screen">
+    <div class="confidence-container">
+      <h2>How confident are you?</h2>
+      <p class="confidence-timer">Time left: <span id="confidence-countdown">10</span>s</p>
+      <div class="confidence-buttons">
+        <button class="conf-btn conf-guessing" data-conf="guessing">
+          <span class="conf-label">Just Guessing</span>
+          <span class="conf-desc">No risk, no reward</span>
+        </button>
+        <button class="conf-btn conf-kinda" data-conf="kinda">
+          <span class="conf-label">Kinda Sure</span>
+          <span class="conf-desc">+60% if right, -40% if wrong</span>
+        </button>
+        <button class="conf-btn conf-very" data-conf="very">
+          <span class="conf-label">Very Sure</span>
+          <span class="conf-desc">+100% if right, -75% if wrong</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== 10. PLAYER TIME'S UP ========== -->
+  <div id="screen-player-timesup" class="screen">
+    <div class="timesup-container">
+      <h2>Time's Up!</h2>
+      <p class="timesup-score">0 pts</p>
+      <p class="timesup-sub">You didn't answer in time</p>
+    </div>
+  </div>
+
+  <!-- ========== 11. PLAYER RESULTS ========== -->
+  <div id="screen-player-results" class="screen">
+    <div class="results-container">
+      <div class="result-icon" id="result-icon"></div>
+      <h2 id="result-heading"></h2>
+      <p class="result-correct" id="result-correct-answer"></p>
+      <p class="result-points" id="result-points"></p>
+      <p class="result-total">Total: <span id="result-total-score">0</span> pts</p>
+    </div>
+  </div>
+
+  <!-- ========== 12. PLAYER WAITING ========== -->
+  <div id="screen-player-waiting" class="screen">
+    <div class="waiting-container">
+      <h2>Waiting for others...</h2>
+      <div class="spinner"></div>
+    </div>
+  </div>
+
+  <!-- ========== 13. LEADERBOARD (PLAYER VIEW) ========== -->
+  <div id="screen-player-leaderboard" class="screen">
+    <div class="leaderboard-container">
+      <h2 class="lb-title">Leaderboard</h2>
+      <div id="player-leaderboard-list" class="leaderboard-list"></div>
+      <p class="get-ready" id="player-get-ready">Get Ready...</p>
+    </div>
+  </div>
+
+  <!-- ========== 14. END GAME ========== -->
+  <div id="screen-endgame" class="screen">
+    <div class="endgame-container">
+      <canvas id="confetti-canvas"></canvas>
+      <h2 class="endgame-title">Game Over!</h2>
+      <div class="podium">
+        <div class="podium-spot podium-2" id="podium-2">
+          <div class="podium-avatar">2nd</div>
+          <div class="podium-name"></div>
+          <div class="podium-score"></div>
+          <div class="podium-bar"></div>
+        </div>
+        <div class="podium-spot podium-1" id="podium-1">
+          <div class="podium-avatar">1st</div>
+          <div class="podium-name"></div>
+          <div class="podium-score"></div>
+          <div class="podium-bar"></div>
+        </div>
+        <div class="podium-spot podium-3" id="podium-3">
+          <div class="podium-avatar">3rd</div>
+          <div class="podium-name"></div>
+          <div class="podium-score"></div>
+          <div class="podium-bar"></div>
+        </div>
+      </div>
+      <div id="endgame-rest" class="endgame-rest"></div>
+      <button class="btn btn-host" id="play-again-btn">Play Again</button>
+    </div>
+  </div>
+
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
