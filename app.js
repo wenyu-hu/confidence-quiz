@@ -1031,6 +1031,16 @@ function escapeHtml(str) {
 // SESSION RESTORE ON REFRESH
 // ============================================
 (async function restoreSession() {
+  // Only restore on refresh — not on fresh link opens
+  const navType = performance.getEntriesByType("navigation")[0]?.type;
+  if (navType === "navigate") {
+    localStorage.removeItem("cqPlayerSession");
+    localStorage.removeItem("cqHostSession");
+    sessionStorage.removeItem("cqAdmin");
+    isAdmin = false;
+    return;
+  }
+
   const playerSess = localStorage.getItem("cqPlayerSession");
   const hostSess = localStorage.getItem("cqHostSession");
 
