@@ -11,6 +11,7 @@
   --text-secondary: #8899bb;
   --accent: #4488ee;
   --choice-a: #e84057;
+  --choice-e: #e87020;
   --choice-b: #4488ee;
   --choice-c: #e8c840;
   --choice-d: #44bb66;
@@ -210,6 +211,13 @@ body {
 .choice-dot-b { background: var(--choice-b); }
 .choice-dot-c { background: var(--choice-c); }
 .choice-dot-d { background: var(--choice-d); }
+.choice-dot-e { background: var(--choice-e); }
+.choice-e-row { grid-column: 1 / -1; }
+.choice-e-fixed {
+  font-weight: 700;
+  color: var(--choice-e);
+  font-size: 0.9rem;
+}
 
 .q-bottom-row {
   display: flex;
@@ -363,6 +371,7 @@ body {
 .host-choice.choice-b { background: var(--choice-b); }
 .host-choice.choice-c { background: var(--choice-c); color: #222; }
 .host-choice.choice-d { background: var(--choice-d); }
+.host-choice.choice-e { background: var(--choice-e); grid-column: 1 / -1; font-weight: 800; }
 .host-choice.correct-answer { box-shadow: 0 0 0 4px #fff, 0 0 20px rgba(68,187,102,0.5); }
 
 .host-status-bar {
@@ -443,6 +452,7 @@ body {
 .choice-btn.choice-b { background: var(--choice-b); }
 .choice-btn.choice-c { background: var(--choice-c); color: #222; }
 .choice-btn.choice-d { background: var(--choice-d); }
+.choice-btn.choice-e { background: var(--choice-e); grid-column: 1 / -1; font-weight: 800; font-style: italic; }
 .choice-btn .choice-letter { font-size: 1.3rem; font-weight: 900; opacity: 0.8; }
 
 .choice-btn.selected {

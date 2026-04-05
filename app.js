@@ -75,6 +75,11 @@ function addQuestionCard(data) {
         <span class="choice-dot choice-dot-d"></span>
         <input type="text" class="q-choice-d" placeholder="Choice D" value="${data ? data.choiceD : ""}">
       </div>
+      <div class="choice-input-row choice-e-row">
+        <input type="radio" name="correct-${num}" value="e" ${data && data.correct === "e" ? "checked" : ""}>
+        <span class="choice-dot choice-dot-e"></span>
+        <span class="choice-e-fixed">Trick Question &#8212; None of the Above</span>
+      </div>
     </div>
     <div class="q-bottom-row">
       <div class="q-field">
@@ -125,7 +130,9 @@ function collectQuestions() {
     if (!text || !choiceA || !choiceB || !choiceC || !choiceD) { valid = false; return; }
     if (!correctRadio) { valid = false; return; }
 
-    qs.push({ text, choiceA, choiceB, choiceC, choiceD, correct: correctRadio.value, points, timeLimit });
+    qs.push({ text, choiceA, choiceB, choiceC, choiceD,
+      choiceE: "Trick Question \u2014 None of the Above",
+      correct: correctRadio.value, points, timeLimit });
   });
   if (!valid || qs.length === 0) return null;
   return qs;
