@@ -243,6 +243,7 @@ async function playQuiz(e, quizId, data) {
     gamePin = pin;
     questions = data.questions;
     role = "host";
+    localStorage.setItem("cqHostSession", JSON.stringify({ gamePin: pin, hostId }));
     await db.collection("games").doc(pin).set({
       title: data.title,
       hostId,
@@ -642,6 +643,7 @@ document.getElementById("join-game-btn").addEventListener("click", async () => {
   gamePin = pin;
   playerName = name;
   role = "player";
+  localStorage.setItem("cqPlayerSession", JSON.stringify({ gamePin: pin, playerName: name }));
 
   await db.collection("games").doc(pin).collection("players").doc(name).set({
     name,
@@ -936,6 +938,8 @@ async function showEndGame() {
     });
   }
 
+  localStorage.removeItem("cqPlayerSession");
+  localStorage.removeItem("cqHostSession");
   showScreen("screen-endgame");
   startConfetti();
 
@@ -946,6 +950,8 @@ async function showEndGame() {
 // Play again — return to My Quizzes to pick and re-launch
 document.getElementById("play-again-btn").addEventListener("click", () => {
   stopConfetti();
+  localStorage.removeItem("cqPlayerSession");
+  localStorage.removeItem("cqHostSession");
   loadMyQuizzes();
   showScreen("screen-my-quizzes");
 });
@@ -1016,3 +1022,65 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+
+// ============================================
+// SESSION RESTORE ON REFRESH
+// ============================================
+(async function restoreSession() {
+  const playerSess = localStorage.getItem("cqPlayerSession");
+  const hostSess = localStorage.getItem("cqHostSession");
+
+  if (playerSess) {
+    try {
+      const { gamePin: pin, playerName: name } = JSON.parse(playerSess);
+      const gameDoc = await db.collection("games").doc(pin).get();
+      if (!gameDoc.exists || gameDoc.data().status === "ended") {
+        localStorage.removeItem("cqPlayerSession"); return;
+      }
+      const playerDoc = await db.collection("games").doc(pin).collection("players").doc(name).get();
+      if (!playerDoc.exists) { localStorage.removeItem("cqPlayerSession"); return; }
+
+      gamePin = pin;
+      playerName = name;
+      role = "player";
+
+      const pData = playerDoc.data();
+      playerAnswered = pData.currentAnswer != null;
+      playerConfidenceChosen = pData.currentConfidence != null;
+
+      document.getElementById("player-lobby-name").textContent = playerName;
+      document.getElementById("player-lobby-pin").textContent = gamePin;
+
+      listenToPlayers();
+      listenToGameState();
+    } catch(e) { localStorage.removeItem("cqPlayerSession"); }
+
+  } else if (hostSess) {
+    try {
+      const { gamePin: pin, hostId: hid } = JSON.parse(hostSess);
+      const gameDoc = await db.collection("games").doc(pin).get();
+      if (!gameDoc.exists) { localStorage.removeItem("cqHostSession"); return; }
+      const data = gameDoc.data();
+      if (data.status === "ended") { localStorage.removeItem("cqHostSession"); return; }
+
+      gamePin = pin;
+      hostId = hid;
+      role = "host";
+      questions = data.questions || [];
+
+      if (data.status === "lobby") {
+        document.getElementById("host-pin-code").textContent = pin;
+        document.getElementById("lobby-quiz-title").textContent = `"${data.title}"`;
+        showScreen("screen-host-lobby");
+        listenToPlayers();
+      } else if (data.status === "playing") {
+        const idx = data.currentQuestionIndex;
+        if (data.phase === "leaderboard") {
+          await showHostLeaderboard(idx);
+        } else {
+          showHostQuestion(idx);
+        }
+      }
+    } catch(e) { localStorage.removeItem("cqHostSession"); }
+  }
+})();
