@@ -14,6 +14,7 @@ let timerInterval = null;
 let confTimerInterval = null;
 let playerAnswered = false;
 let playerConfidenceChosen = false;
+let playerCurrentQIndex = -1;
 
 // ---------- Admin Auth ----------
 const ADMIN_HASH = "60f9c4e008dddf5c1bfa41cf9fefb9167816f22ebc6c5983e05362fe44807fde";
@@ -672,7 +673,13 @@ function listenToGameState() {
 
     if (data.status === "playing") {
       if (data.phase === "question") {
-        showPlayerQuestion(data);
+        const idx = data.currentQuestionIndex;
+        if (idx !== playerCurrentQIndex) {
+          playerCurrentQIndex = idx;
+          playerAnswered = false;
+          playerConfidenceChosen = false;
+          showPlayerQuestion(data);
+        }
       } else if (data.phase === "confidence") {
         if (!playerAnswered) {
           // Didn't answer in time
@@ -697,9 +704,6 @@ function listenToGameState() {
 // ============================================
 
 function showPlayerQuestion(gameData) {
-  playerAnswered = false;
-  playerConfidenceChosen = false;
-
   const idx = gameData.currentQuestionIndex;
   const q = gameData.questions[idx];
 
@@ -1047,6 +1051,11 @@ function escapeHtml(str) {
       const pData = playerDoc.data();
       playerAnswered = pData.currentAnswer != null;
       playerConfidenceChosen = pData.currentConfidence != null;
+
+      const gameData = gameDoc.data();
+      if (playerAnswered && gameData.phase === "question") {
+        playerCurrentQIndex = gameData.currentQuestionIndex;
+      }
 
       document.getElementById("player-lobby-name").textContent = playerName;
       document.getElementById("player-lobby-pin").textContent = gamePin;
