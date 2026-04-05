@@ -15,6 +15,16 @@ let confTimerInterval = null;
 let playerAnswered = false;
 let playerConfidenceChosen = false;
 
+// ---------- Admin Auth ----------
+const ADMIN_HASH = "60f9c4e008dddf5c1bfa41cf9fefb9167816f22ebc6c5983e05362fe44807fde";
+let isAdmin = sessionStorage.getItem("cqAdmin") === "1";
+let editingQuizId = null;
+
+async function hashPassword(pw) {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(pw));
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
+}
+
 // ---------- Screen management ----------
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
@@ -124,6 +134,162 @@ function collectQuestions() {
 document.getElementById("add-question-btn").addEventListener("click", () => addQuestionCard());
 
 // ============================================
+// ADMIN AUTH + QUIZ MANAGEMENT
+// ============================================
+
+document.getElementById("go-admin-btn").addEventListener("click", () => {
+  if (isAdmin) { loadMyQuizzes(); showScreen("screen-my-quizzes"); }
+  else showScreen("screen-admin-login");
+});
+
+document.getElementById("admin-login-btn").addEventListener("click", async () => {
+  const pw = document.getElementById("admin-password-input").value;
+  const hash = await hashPassword(pw);
+  if (hash === ADMIN_HASH) {
+    isAdmin = true;
+    sessionStorage.setItem("cqAdmin", "1");
+    document.getElementById("admin-password-input").value = "";
+    document.getElementById("login-error").classList.add("hidden");
+    loadMyQuizzes();
+    showScreen("screen-my-quizzes");
+  } else {
+    document.getElementById("login-error").classList.remove("hidden");
+  }
+});
+
+document.getElementById("admin-password-input").addEventListener("keydown", e => {
+  if (e.key === "Enter") document.getElementById("admin-login-btn").click();
+});
+
+document.getElementById("admin-logout-btn").addEventListener("click", () => {
+  isAdmin = false;
+  sessionStorage.removeItem("cqAdmin");
+  showScreen("screen-home");
+});
+
+document.getElementById("create-quiz-btn").addEventListener("click", () => openQuizBuilder());
+
+async function loadMyQuizzes() {
+  const list = document.getElementById("quiz-list");
+  list.innerHTML = `<p class="quiz-list-msg">Loading...</p>`;
+  try {
+    const snap = await db.collection("quizzes").orderBy("createdAt", "desc").get();
+    list.innerHTML = "";
+    if (snap.empty) {
+      list.innerHTML = `<p class="quiz-list-msg">No quizzes yet. Create your first one!</p>`;
+      return;
+    }
+    snap.forEach(doc => {
+      const data = doc.data();
+      const card = document.createElement("div");
+      card.className = "quiz-card";
+      card.innerHTML = `
+        <div class="quiz-card-info">
+          <div class="quiz-card-title">${escapeHtml(data.title)}</div>
+          <div class="quiz-card-meta">${data.questions.length} question${data.questions.length !== 1 ? "s" : ""}</div>
+        </div>
+        <div class="quiz-card-actions">
+          <button class="btn btn-secondary btn-small quiz-edit-btn">Edit</button>
+          <button class="btn btn-danger btn-small quiz-delete-btn">Delete</button>
+          <button class="btn btn-host btn-small quiz-play-btn">&#9654; Play</button>
+        </div>
+      `;
+      card.querySelector(".quiz-edit-btn").addEventListener("click", () => openQuizBuilder(doc.id, data));
+      card.querySelector(".quiz-delete-btn").addEventListener("click", () => deleteQuiz(doc.id, data.title));
+      card.querySelector(".quiz-play-btn").addEventListener("click", e => playQuiz(e, doc.id, data));
+      list.appendChild(card);
+    });
+  } catch (err) {
+    list.innerHTML = `<p class="quiz-list-msg">Error loading quizzes.</p>`;
+  }
+}
+
+function openQuizBuilder(quizId = null, data = null) {
+  editingQuizId = quizId;
+  document.getElementById("quiz-title").value = data ? data.title : "";
+  document.getElementById("setup-title").textContent = quizId ? "Edit Quiz" : "Create Quiz";
+  document.getElementById("questions-builder").innerHTML = "";
+  questionCount = 0;
+  if (data && data.questions && data.questions.length > 0) {
+    data.questions.forEach(q => addQuestionCard(q));
+  } else {
+    addQuestionCard();
+  }
+  document.getElementById("save-quiz-btn").textContent = quizId ? "Save Changes" : "Save Quiz";
+  showScreen("screen-host-setup");
+}
+
+async function deleteQuiz(quizId, title) {
+  if (!confirm(`Delete "${title}"? This cannot be undone.`)) return;
+  await db.collection("quizzes").doc(quizId).delete();
+  loadMyQuizzes();
+}
+
+async function playQuiz(e, quizId, data) {
+  const btn = e.currentTarget;
+  btn.disabled = true;
+  btn.textContent = "Starting...";
+  try {
+    const pin = await generatePin();
+    if (!pin) { alert("Could not generate PIN. Try again."); btn.disabled = false; btn.innerHTML = "&#9654; Play"; return; }
+    hostId = "host_" + Math.random().toString(36).slice(2, 10);
+    gamePin = pin;
+    questions = data.questions;
+    role = "host";
+    await db.collection("games").doc(pin).set({
+      title: data.title,
+      hostId,
+      status: "lobby",
+      phase: null,
+      currentQuestionIndex: 0,
+      questions: data.questions,
+      questionStartedAt: null,
+      confidenceStartedAt: null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    document.getElementById("host-pin-code").textContent = pin;
+    document.getElementById("lobby-quiz-title").textContent = `"${data.title}"`;
+    showScreen("screen-host-lobby");
+    listenToPlayers();
+  } catch (err) {
+    alert("Error starting game. Try again.");
+  }
+  btn.disabled = false;
+  btn.innerHTML = "&#9654; Play";
+}
+
+document.getElementById("save-quiz-btn").addEventListener("click", async () => {
+  const title = document.getElementById("quiz-title").value.trim();
+  if (!title) { alert("Please enter a quiz title."); return; }
+  const qs = collectQuestions();
+  if (!qs) { alert("Please fill in all question fields and select a correct answer for each."); return; }
+
+  const btn = document.getElementById("save-quiz-btn");
+  btn.disabled = true;
+  btn.textContent = "Saving...";
+  try {
+    if (editingQuizId) {
+      await db.collection("quizzes").doc(editingQuizId).update({
+        title, questions: qs,
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } else {
+      await db.collection("quizzes").add({
+        title, questions: qs,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+        updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }
+    loadMyQuizzes();
+    showScreen("screen-my-quizzes");
+  } catch (err) {
+    alert("Error saving quiz. Try again.");
+  }
+  btn.disabled = false;
+  btn.textContent = editingQuizId ? "Save Changes" : "Save Quiz";
+});
+
+// ============================================
 // HOST — START GAME (create Firestore doc)
 // ============================================
 
@@ -136,45 +302,6 @@ async function generatePin() {
   return null;
 }
 
-document.getElementById("start-game-btn").addEventListener("click", async () => {
-  const title = document.getElementById("quiz-title").value.trim();
-  if (!title) { alert("Please enter a quiz title."); return; }
-
-  const qs = collectQuestions();
-  if (!qs) { alert("Please fill in all question fields and select a correct answer for each."); return; }
-
-  const btn = document.getElementById("start-game-btn");
-  btn.disabled = true;
-  btn.textContent = "Creating...";
-
-  const pin = await generatePin();
-  if (!pin) { alert("Could not generate a unique PIN. Try again."); btn.disabled = false; btn.textContent = "Start Game"; return; }
-
-  hostId = "host_" + Math.random().toString(36).slice(2, 10);
-  gamePin = pin;
-  questions = qs;
-  role = "host";
-
-  await db.collection("games").doc(pin).set({
-    title,
-    hostId,
-    status: "lobby",
-    phase: null,
-    currentQuestionIndex: 0,
-    questions: qs,
-    questionStartedAt: null,
-    confidenceStartedAt: null,
-    createdAt: firebase.firestore.FieldValue.serverTimestamp()
-  });
-
-  document.getElementById("host-pin-code").textContent = pin;
-  document.getElementById("lobby-quiz-title").textContent = `"${title}"`;
-  showScreen("screen-host-lobby");
-  listenToPlayers();
-
-  btn.disabled = false;
-  btn.textContent = "Start Game";
-});
 
 // ============================================
 // HOST — LOBBY (listen for players)
@@ -809,31 +936,11 @@ async function showEndGame() {
   document.getElementById("play-again-btn").classList.toggle("hidden", role !== "host");
 }
 
-// Play again
-document.getElementById("play-again-btn").addEventListener("click", async () => {
-  // Reset player scores
-  const snap = await db.collection("games").doc(gamePin).collection("players").get();
-  const batch = db.batch();
-  snap.forEach(doc => {
-    batch.update(doc.ref, {
-      score: 0,
-      currentAnswer: null,
-      currentConfidence: null,
-      pointsThisRound: 0
-    });
-  });
-  await batch.commit();
-
-  await db.collection("games").doc(gamePin).update({
-    status: "lobby",
-    phase: null,
-    currentQuestionIndex: 0,
-    questionStartedAt: null,
-    confidenceStartedAt: null
-  });
-
-  showScreen("screen-host-lobby");
+// Play again — return to My Quizzes to pick and re-launch
+document.getElementById("play-again-btn").addEventListener("click", () => {
   stopConfetti();
+  loadMyQuizzes();
+  showScreen("screen-my-quizzes");
 });
 
 // ============================================
@@ -902,5 +1009,3 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Add a default question card on page load
-addQuestionCard();

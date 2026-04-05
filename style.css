@@ -742,3 +742,110 @@ body {
   .pin-code { font-size: 3rem; }
   .podium-spot { width: 100px; }
 }
+
+/* ============ ADMIN LOGIN ============ */
+.login-container {
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+.login-field {
+  margin-bottom: 16px;
+}
+
+.login-field label {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+}
+
+.login-field input {
+  width: 100%;
+  padding: 12px 16px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  outline: none;
+}
+
+.login-field input:focus { border-color: var(--accent); }
+
+.login-error {
+  color: var(--danger);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+/* ============ MY QUIZZES ============ */
+.my-quizzes-container {
+  width: 100%;
+  max-width: 640px;
+}
+
+.my-quizzes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.my-quizzes-header h2 { font-size: 1.8rem; }
+
+.mq-actions { display: flex; gap: 10px; }
+
+.quiz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quiz-list-msg {
+  color: var(--text-secondary);
+  text-align: center;
+  padding: 48px 0;
+  font-size: 1rem;
+}
+
+.quiz-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  gap: 16px;
+  transition: border-color 0.2s;
+}
+
+.quiz-card:hover { border-color: var(--accent); }
+
+.quiz-card-info { flex: 1; min-width: 0; }
+
+.quiz-card-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quiz-card-meta {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.quiz-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}

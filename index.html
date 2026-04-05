@@ -14,17 +14,45 @@
       <h1 class="home-title">Confidence Quiz</h1>
       <p class="home-subtitle">Test your knowledge — and your confidence</p>
       <div class="home-buttons">
-        <button class="btn btn-host" onclick="showScreen('screen-host-setup')">Host a Game</button>
+        <button class="btn btn-host" id="go-admin-btn">Admin Login</button>
         <button class="btn btn-join" onclick="showScreen('screen-player-join')">Join a Game</button>
       </div>
     </div>
   </div>
 
-  <!-- ========== 2. HOST SETUP ========== -->
+  <!-- ========== 2. ADMIN LOGIN ========== -->
+  <div id="screen-admin-login" class="screen">
+    <div class="login-container">
+      <button class="btn-back" onclick="showScreen('screen-home')">&larr; Back</button>
+      <h2>Admin Login</h2>
+      <div class="login-field">
+        <label>Password</label>
+        <input type="password" id="admin-password-input" placeholder="Enter password" autocomplete="off">
+      </div>
+      <p class="login-error hidden" id="login-error">Incorrect password.</p>
+      <button class="btn btn-host" id="admin-login-btn">Login</button>
+    </div>
+  </div>
+
+  <!-- ========== 3. MY QUIZZES ========== -->
+  <div id="screen-my-quizzes" class="screen">
+    <div class="my-quizzes-container">
+      <div class="my-quizzes-header">
+        <h2>My Quizzes</h2>
+        <div class="mq-actions">
+          <button class="btn btn-host" id="create-quiz-btn">+ Create Quiz</button>
+          <button class="btn btn-secondary" id="admin-logout-btn">Log Out</button>
+        </div>
+      </div>
+      <div id="quiz-list" class="quiz-list"></div>
+    </div>
+  </div>
+
+  <!-- ========== 4. HOST SETUP ========== -->
   <div id="screen-host-setup" class="screen">
     <div class="setup-container">
-      <button class="btn-back" onclick="showScreen('screen-home')">&larr; Back</button>
-      <h2>Create Your Quiz</h2>
+      <button class="btn-back" onclick="showScreen('screen-my-quizzes')">&larr; Back</button>
+      <h2 id="setup-title">Create Quiz</h2>
       <div class="setup-field">
         <label>Quiz Title</label>
         <input type="text" id="quiz-title" placeholder="e.g. Science Trivia" autocomplete="off">
@@ -32,7 +60,7 @@
       <div id="questions-builder"></div>
       <button class="btn btn-secondary" id="add-question-btn">+ Add Question</button>
       <div class="setup-actions">
-        <button class="btn btn-host" id="start-game-btn">Start Game</button>
+        <button class="btn btn-host" id="save-quiz-btn">Save Quiz</button>
       </div>
     </div>
   </div>
