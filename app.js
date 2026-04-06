@@ -514,12 +514,14 @@ async function endConfidencePhase(qIdx) {
     if (answer) {
       if (isCorrect) {
         if (confidence === "guessing") delta = 0;
-        else if (confidence === "kinda") delta = Math.round(q.points * 0.6);
-        else if (confidence === "very") delta = q.points;
+        else if (confidence === "kinda")   delta = Math.round(q.points * 0.4);
+        else if (confidence === "pretty")  delta = Math.round(q.points * 0.7);
+        else if (confidence === "certain") delta = q.points;
       } else {
         if (confidence === "guessing") delta = 0;
-        else if (confidence === "kinda") delta = -Math.round(q.points * 0.4);
-        else if (confidence === "very") delta = -Math.round(q.points * 0.75);
+        else if (confidence === "kinda")   delta = -Math.round(q.points * 0.6);
+        else if (confidence === "pretty")  delta = -Math.round(q.points * 0.3);
+        else if (confidence === "certain") delta = -Math.round(q.points * 0.75);
       }
     }
 
@@ -973,8 +975,9 @@ async function showPlayerResults(gameData) {
   pointsEl.textContent = delta > 0 ? `+${delta} pts` : delta < 0 ? `${delta} pts` : "0 pts";
   pointsEl.className = "result-points " + (delta > 0 ? "positive" : delta < 0 ? "negative" : "zero");
 
-  const confLabel = pData.currentConfidence === "very" ? "Very Sure" :
-                    pData.currentConfidence === "kinda" ? "Kinda Sure" : "Just Guessing";
+  const confLabel = pData.currentConfidence === "certain" ? "Certain" :
+                    pData.currentConfidence === "pretty"  ? "Pretty Sure" :
+                    pData.currentConfidence === "kinda"   ? "Kinda Sure" : "Just Guessing";
   if (pData.currentAnswer) {
     const symbol = isCorrect ? "\u2713" : "\u2717";
     pointsEl.textContent += ` \u2014 ${confLabel} ${symbol}`;

@@ -498,14 +498,19 @@ body {
 
 .conf-guessing {
   background: #cc7722;
-  padding: 16px;
+  padding: 14px;
 }
 .conf-kinda {
+  background: #cc9922;
+  padding: 17px;
+  color: #222;
+}
+.conf-pretty {
   background: #ccaa22;
   padding: 20px;
   color: #222;
 }
-.conf-very {
+.conf-certain {
   background: var(--success);
   padding: 24px;
 }
