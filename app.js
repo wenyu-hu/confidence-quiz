@@ -654,9 +654,10 @@ function renderLeaderboard(players, containerId, highlightName = null) {
   // We defer one rAF so showScreen() has already run and the container is visible,
   // letting us read the real row height for computing dy.
   if (Object.keys(prevRank).length > 0) {
-    requestAnimationFrame(() => {
+    // Use setTimeout instead of rAF so the browser has time to commit display:flex
+    // from showScreen() before we measure row height.
+    setTimeout(() => {
       const firstRow = container.querySelector(".lb-row");
-      // gap is 8px (matches CSS). If screen is still hidden height will be 0 — bail out.
       const stride = firstRow ? firstRow.getBoundingClientRect().height + 8 : 0;
       if (stride < 10) return;
 
@@ -669,6 +670,7 @@ function renderLeaderboard(players, containerId, highlightName = null) {
         row.style.transform = `translateY(${dy}px)`;
       });
 
+      // 500ms pause before sliding so players can read the leaderboard first
       setTimeout(() => {
         container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
           if (!row.style.transform) return;
@@ -677,7 +679,7 @@ function renderLeaderboard(players, containerId, highlightName = null) {
           row.addEventListener("transitionend", () => { row.style.transition = ""; }, { once: true });
         });
       }, 500);
-    });
+    }, 80);
   }
 
   // Score count-up animation
@@ -1079,6 +1081,7 @@ async function showEndGame() {
 
 document.getElementById("show-stats-btn").addEventListener("click", async () => {
   await db.collection("games").doc(gamePin).update({ phase: "stats" });
+  showStatsScreen(); // host sees it directly; players see it via the Firestore listener
 });
 
 document.getElementById("stats-play-again-btn").addEventListener("click", () => {
