@@ -784,7 +784,8 @@ function listenToGameState() {
         // Players who answered are already on the confidence screen
       } else if (data.phase === "results") {
         clearInterval(confTimerInterval);
-        showPlayerResults(data);
+        if (playerAnswered) showPlayerResults(data);
+        // Non-answerers stay on the Time's Up screen until leaderboard
       } else if (data.phase === "leaderboard") {
         showPlayerLeaderboard();
       }
