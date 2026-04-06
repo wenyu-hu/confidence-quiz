@@ -599,14 +599,12 @@ async function showHostLeaderboard(qIdx, q = null, distribution = null, totalAns
   document.getElementById("host-end-game-btn").classList.toggle("hidden", !isLast);
 }
 
+// Tracks each player's previous rank per leaderboard container
+const _lbPrevRank = {};
+
 function renderLeaderboard(players, containerId, highlightName = null) {
   const container = document.getElementById(containerId);
-
-  // FLIP step 1 — record current positions before re-render
-  const oldTops = {};
-  container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
-    oldTops[row.dataset.lbName] = row.getBoundingClientRect().top;
-  });
+  const prevRank = _lbPrevRank[containerId] || {};
 
   // Render new layout
   container.innerHTML = "";
@@ -614,6 +612,7 @@ function renderLeaderboard(players, containerId, highlightName = null) {
     const row = document.createElement("div");
     row.className = "lb-row" + (highlightName && p.name === highlightName ? " lb-row-me" : "");
     row.dataset.lbName = p.name;
+    row.dataset.lbRank = i;
     const delta = p.pointsThisRound || 0;
     const deltaClass = delta > 0 ? "positive" : delta < 0 ? "negative" : "zero";
     const deltaText = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "0";
@@ -629,27 +628,39 @@ function renderLeaderboard(players, containerId, highlightName = null) {
     container.appendChild(row);
   });
 
-  // FLIP step 2 — invert: jump each row to its old visual position
-  requestAnimationFrame(() => {
-    container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
-      const oldTop = oldTops[row.dataset.lbName];
-      if (oldTop == null) return;
-      const dy = oldTop - row.getBoundingClientRect().top;
-      if (Math.abs(dy) < 1) return;
-      row.style.transition = "none";
-      row.style.transform = `translateY(${dy}px)`;
-    });
+  // Save current ranks for next render
+  _lbPrevRank[containerId] = {};
+  players.forEach((p, i) => { _lbPrevRank[containerId][p.name] = i; });
 
-    // FLIP step 3 — play: transition to new position
+  // FLIP: animate rows from previous rank to new rank.
+  // We defer one rAF so showScreen() has already run and the container is visible,
+  // letting us read the real row height for computing dy.
+  if (Object.keys(prevRank).length > 0) {
     requestAnimationFrame(() => {
+      const firstRow = container.querySelector(".lb-row");
+      // gap is 8px (matches CSS). If screen is still hidden height will be 0 — bail out.
+      const stride = firstRow ? firstRow.getBoundingClientRect().height + 8 : 0;
+      if (stride < 10) return;
+
       container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
-        if (!row.style.transform) return;
-        row.style.transition = "transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)";
-        row.style.transform = "";
-        row.addEventListener("transitionend", () => { row.style.transition = ""; }, { once: true });
+        const oldIdx = prevRank[row.dataset.lbName];
+        const newIdx = parseInt(row.dataset.lbRank, 10);
+        if (oldIdx == null || oldIdx === newIdx) return;
+        const dy = (oldIdx - newIdx) * stride;
+        row.style.transition = "none";
+        row.style.transform = `translateY(${dy}px)`;
+      });
+
+      requestAnimationFrame(() => {
+        container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
+          if (!row.style.transform) return;
+          row.style.transition = "transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)";
+          row.style.transform = "";
+          row.addEventListener("transitionend", () => { row.style.transition = ""; }, { once: true });
+        });
       });
     });
-  });
+  }
 
   // Score count-up animation
   const duration = 1400;
@@ -660,7 +671,7 @@ function renderLeaderboard(players, containerId, highlightName = null) {
     if (from === to) return;
     function tick(now) {
       const t = Math.min((now - startTime) / duration, 1);
-      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      const eased = 1 - Math.pow(1 - t, 3);
       el.textContent = Math.round(from + (to - from) * eased);
       if (t < 1) requestAnimationFrame(tick);
     }
