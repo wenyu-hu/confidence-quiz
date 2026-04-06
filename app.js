@@ -504,13 +504,14 @@ async function endConfidencePhase(qIdx) {
   const snap = await db.collection("games").doc(gamePin).collection("players").get();
   const batch = db.batch();
 
+  // Collect player data and compute deltas
+  const allPlayers = [];
   snap.forEach(doc => {
     const d = doc.data();
     const answer = d.currentAnswer || null;
     const confidence = d.currentConfidence || "guessing";
-    const isCorrect = answer === q.correct;
+    const isCorrect = !!answer && answer === q.correct;
     let delta = 0;
-
     if (answer) {
       if (isCorrect) {
         if (confidence === "guessing") delta = 0;
@@ -524,19 +525,34 @@ async function endConfidencePhase(qIdx) {
         else if (confidence === "certain") delta = -Math.round(q.points * 0.75);
       }
     }
-
-    batch.update(doc.ref, {
-      score: (d.score || 0) + delta,
-      pointsThisRound: delta
-    });
+    allPlayers.push({ ref: doc.ref, d, answer, confidence, isCorrect, delta });
   });
+
+  // Compute old ranks (before this round)
+  [...allPlayers].sort((a, b) => (b.d.score || 0) - (a.d.score || 0))
+    .forEach((p, i) => { p.oldRank = i + 1; });
+
+  // Compute new ranks (after this round)
+  [...allPlayers].sort((a, b) => ((b.d.score || 0) + b.delta) - ((a.d.score || 0) + a.delta))
+    .forEach((p, i) => { p.newRank = i + 1; });
 
   // Compute answer distribution
   const distribution = { a: 0, b: 0, c: 0, d: 0, e: 0 };
   let totalAnswered = 0;
-  snap.forEach(doc => {
-    const ans = doc.data().currentAnswer;
-    if (ans && ans in distribution) { distribution[ans]++; totalAnswered++; }
+  allPlayers.forEach(({ answer }) => {
+    if (answer && answer in distribution) { distribution[answer]++; totalAnswered++; }
+  });
+
+  // Batch update with history and rank tracking
+  allPlayers.forEach(({ ref, d, answer, confidence, isCorrect, delta, oldRank, newRank }) => {
+    const history = d.history || [];
+    history.push({ wasCorrect: isCorrect, confidence, answered: !!answer, delta, questionPoints: q.points });
+    batch.update(ref, {
+      score: (d.score || 0) + delta,
+      pointsThisRound: delta,
+      history,
+      biggestRankGain: Math.max(d.biggestRankGain || 0, oldRank - newRank)
+    });
   });
 
   await batch.commit();
@@ -790,7 +806,8 @@ function listenToGameState() {
         showPlayerLeaderboard();
       }
     } else if (data.status === "ended") {
-      showEndGame();
+      if (data.phase === "stats") showStatsScreen();
+      else showEndGame();
     }
   });
 }
@@ -1056,18 +1073,87 @@ async function showEndGame() {
   showScreen("screen-endgame");
   startConfetti();
 
-  // Show play again only for host
-  document.getElementById("play-again-btn").classList.toggle("hidden", role !== "host");
+  // Show "Show Stats" button only for host
+  document.getElementById("show-stats-btn").classList.toggle("hidden", role !== "host");
 }
 
-// Play again — return to My Quizzes to pick and re-launch
-document.getElementById("play-again-btn").addEventListener("click", () => {
+document.getElementById("show-stats-btn").addEventListener("click", async () => {
+  await db.collection("games").doc(gamePin).update({ phase: "stats" });
+});
+
+document.getElementById("stats-play-again-btn").addEventListener("click", () => {
   stopConfetti();
   localStorage.removeItem("cqPlayerSession");
   localStorage.removeItem("cqHostSession");
   loadMyQuizzes();
   showScreen("screen-my-quizzes");
 });
+
+// ============================================
+// STATS SCREEN
+// ============================================
+
+async function showStatsScreen() {
+  const snap = await db.collection("games").doc(gamePin).collection("players").get();
+  const players = [];
+  snap.forEach(doc => players.push({ id: doc.id, ...doc.data() }));
+  players.sort((a, b) => (b.score || 0) - (a.score || 0));
+
+  const confMap = { guessing: 0, kinda: 1, pretty: 2, certain: 3 };
+  const confShort = ["Guessing", "Kinda Sure", "Pretty Sure", "Certain"];
+
+  const tbody = document.getElementById("stats-tbody");
+  tbody.innerHTML = "";
+
+  players.forEach(p => {
+    const history = p.history || [];
+    const answered = history.filter(h => h.answered);
+    const correct = answered.filter(h => h.wasCorrect);
+
+    // Accuracy
+    const accuracy = answered.length > 0
+      ? `${correct.length}/${answered.length} (${Math.round(correct.length / answered.length * 100)}%)`
+      : "—";
+
+    // Avg confidence
+    let avgConf = "—";
+    if (answered.length > 0) {
+      const avg = answered.reduce((s, h) => s + (confMap[h.confidence] || 0), 0) / answered.length;
+      avgConf = confShort[Math.round(Math.min(3, Math.max(0, avg)))];
+    }
+
+    // Calibration: actual pts / max possible pts on correct answers
+    const maxPts = correct.reduce((s, h) => s + (h.questionPoints || 0), 0);
+    const calibration = maxPts > 0
+      ? `${Math.round(answered.reduce((s, h) => s + (h.delta || 0), 0) / maxPts * 100)}%`
+      : "—";
+
+    // Best move
+    const bestMove = (p.biggestRankGain || 0) > 0 ? `+${p.biggestRankGain}` : "—";
+
+    // Highest streak
+    let streak = 0, maxStreak = 0;
+    history.forEach(h => {
+      if (h.answered && h.wasCorrect) { streak++; maxStreak = Math.max(maxStreak, streak); }
+      else { streak = 0; }
+    });
+
+    const tr = document.createElement("tr");
+    if (playerName && p.name === playerName) tr.className = "stats-row-me";
+    tr.innerHTML = `
+      <td class="stats-name">${escapeHtml(p.name)}</td>
+      <td>${accuracy}</td>
+      <td>${avgConf}</td>
+      <td>${calibration}</td>
+      <td>${bestMove}</td>
+      <td>${maxStreak}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  showScreen("screen-stats");
+  document.getElementById("stats-play-again-btn").classList.toggle("hidden", role !== "host");
+}
 
 // ============================================
 // CONFETTI

@@ -959,3 +959,51 @@ body {
   font-weight: 900;
   flex-shrink: 0;
 }
+
+/* ===== STATS SCREEN ===== */
+.stats-container {
+  padding: 20px;
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+.stats-title {
+  text-align: center;
+  margin-bottom: 20px;
+}
+.stats-table-wrap {
+  overflow-x: auto;
+  border-radius: 12px;
+  margin-bottom: 24px;
+  background: var(--bg-card);
+}
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+.stats-table th {
+  background: rgba(255,255,255,0.06);
+  padding: 10px 12px;
+  text-align: center;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+.stats-table th:first-child { text-align: left; }
+.stats-table td {
+  padding: 11px 12px;
+  text-align: center;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  color: var(--text-primary);
+}
+.stats-table td:first-child { text-align: left; }
+.stats-table tbody tr:last-child td { border-bottom: none; }
+.stats-name { font-weight: 700; }
+.stats-row-me td { background: rgba(255,255,255,0.1); font-weight: 700; }
+.stats-controls {
+  display: flex;
+  justify-content: center;
+}

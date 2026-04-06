@@ -260,7 +260,32 @@
         </div>
       </div>
       <div id="endgame-rest" class="endgame-rest"></div>
-      <button class="btn btn-host" id="play-again-btn">Play Again</button>
+      <button class="btn btn-host hidden" id="show-stats-btn">Show Stats</button>
+    </div>
+  </div>
+
+  <!-- ========== STATS SCREEN ========== -->
+  <div id="screen-stats" class="screen">
+    <div class="stats-container">
+      <h2 class="stats-title">Game Stats</h2>
+      <div class="stats-table-wrap">
+        <table class="stats-table">
+          <thead>
+            <tr>
+              <th>Player</th>
+              <th>Accuracy</th>
+              <th>Avg Conf.</th>
+              <th>Calibration</th>
+              <th>Best Move</th>
+              <th>Streak</th>
+            </tr>
+          </thead>
+          <tbody id="stats-tbody"></tbody>
+        </table>
+      </div>
+      <div class="stats-controls">
+        <button class="btn btn-host hidden" id="stats-play-again-btn">Play Again</button>
+      </div>
     </div>
   </div>
 
