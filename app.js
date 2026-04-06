@@ -519,8 +519,8 @@ async function endConfidencePhase(qIdx) {
         else if (confidence === "certain") delta = q.points;
       } else {
         if (confidence === "guessing") delta = 0;
-        else if (confidence === "kinda")   delta = -Math.round(q.points * 0.6);
-        else if (confidence === "pretty")  delta = -Math.round(q.points * 0.3);
+        else if (confidence === "kinda")   delta = -Math.round(q.points * 0.3);
+        else if (confidence === "pretty")  delta = -Math.round(q.points * 0.5);
         else if (confidence === "certain") delta = -Math.round(q.points * 0.75);
       }
     }
