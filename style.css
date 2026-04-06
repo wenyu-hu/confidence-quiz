@@ -591,6 +591,15 @@ body {
   border-radius: 10px;
   transition: transform 0.5s ease, opacity 0.3s;
 }
+.lb-row.lb-row-me {
+  background: #fff;
+  color: #111;
+}
+.lb-row.lb-row-me .lb-rank,
+.lb-row.lb-row-me .lb-name,
+.lb-row.lb-row-me .lb-score {
+  color: #111;
+}
 .lb-rank {
   font-size: 1.2rem;
   font-weight: 900;

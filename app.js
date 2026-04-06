@@ -599,12 +599,12 @@ async function showHostLeaderboard(qIdx, q = null, distribution = null, totalAns
   document.getElementById("host-end-game-btn").classList.toggle("hidden", !isLast);
 }
 
-function renderLeaderboard(players, containerId) {
+function renderLeaderboard(players, containerId, highlightName = null) {
   const container = document.getElementById(containerId);
   container.innerHTML = "";
   players.forEach((p, i) => {
     const row = document.createElement("div");
-    row.className = "lb-row";
+    row.className = "lb-row" + (highlightName && p.name === highlightName ? " lb-row-me" : "");
     const delta = p.pointsThisRound || 0;
     const deltaClass = delta > 0 ? "positive" : delta < 0 ? "negative" : "zero";
     const deltaText = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "0";
@@ -932,7 +932,7 @@ async function showPlayerLeaderboard() {
   snap.forEach(doc => players.push({ id: doc.id, ...doc.data() }));
   players.sort((a, b) => (b.score || 0) - (a.score || 0));
 
-  renderLeaderboard(players, "player-leaderboard-list");
+  renderLeaderboard(players, "player-leaderboard-list", playerName);
   document.getElementById("player-get-ready").textContent = "Get Ready...";
   showScreen("screen-player-leaderboard");
 }
@@ -970,7 +970,7 @@ async function showEndGame() {
   if (players.length > 3) {
     players.slice(3).forEach((p, i) => {
       const row = document.createElement("div");
-      row.className = "lb-row";
+      row.className = "lb-row" + (playerName && p.name === playerName ? " lb-row-me" : "");
       row.innerHTML = `
         <span class="lb-rank">${i + 4}</span>
         <span class="lb-name">${escapeHtml(p.name)}</span>
