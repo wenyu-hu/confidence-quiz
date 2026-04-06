@@ -651,14 +651,14 @@ function renderLeaderboard(players, containerId, highlightName = null) {
         row.style.transform = `translateY(${dy}px)`;
       });
 
-      requestAnimationFrame(() => {
+      setTimeout(() => {
         container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
           if (!row.style.transform) return;
-          row.style.transition = "transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)";
+          row.style.transition = "transform 1.1s cubic-bezier(0.4, 0, 0.2, 1)";
           row.style.transform = "";
           row.addEventListener("transitionend", () => { row.style.transition = ""; }, { once: true });
         });
-      });
+      }, 500);
     });
   }
 
