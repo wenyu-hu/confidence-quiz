@@ -601,21 +601,70 @@ async function showHostLeaderboard(qIdx, q = null, distribution = null, totalAns
 
 function renderLeaderboard(players, containerId, highlightName = null) {
   const container = document.getElementById(containerId);
+
+  // FLIP step 1 — record current positions before re-render
+  const oldTops = {};
+  container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
+    oldTops[row.dataset.lbName] = row.getBoundingClientRect().top;
+  });
+
+  // Render new layout
   container.innerHTML = "";
   players.forEach((p, i) => {
     const row = document.createElement("div");
     row.className = "lb-row" + (highlightName && p.name === highlightName ? " lb-row-me" : "");
+    row.dataset.lbName = p.name;
     const delta = p.pointsThisRound || 0;
     const deltaClass = delta > 0 ? "positive" : delta < 0 ? "negative" : "zero";
     const deltaText = delta > 0 ? `+${delta}` : delta < 0 ? `${delta}` : "0";
     const rankClass = i < 3 ? ` lb-rank-${i + 1}` : "";
+    const newScore = p.score || 0;
+    const oldScore = newScore - delta;
     row.innerHTML = `
       <span class="lb-rank${rankClass}">${i + 1}</span>
       <span class="lb-name">${escapeHtml(p.name)}</span>
-      <span class="lb-score">${p.score || 0}</span>
+      <span class="lb-score" data-new-score="${newScore}">${oldScore}</span>
       <span class="lb-delta ${deltaClass}">${deltaText}</span>
     `;
     container.appendChild(row);
+  });
+
+  // FLIP step 2 — invert: jump each row to its old visual position
+  requestAnimationFrame(() => {
+    container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
+      const oldTop = oldTops[row.dataset.lbName];
+      if (oldTop == null) return;
+      const dy = oldTop - row.getBoundingClientRect().top;
+      if (Math.abs(dy) < 1) return;
+      row.style.transition = "none";
+      row.style.transform = `translateY(${dy}px)`;
+    });
+
+    // FLIP step 3 — play: transition to new position
+    requestAnimationFrame(() => {
+      container.querySelectorAll(".lb-row[data-lb-name]").forEach(row => {
+        if (!row.style.transform) return;
+        row.style.transition = "transform 0.7s cubic-bezier(0.4, 0, 0.2, 1)";
+        row.style.transform = "";
+        row.addEventListener("transitionend", () => { row.style.transition = ""; }, { once: true });
+      });
+    });
+  });
+
+  // Score count-up animation
+  const duration = 1400;
+  const startTime = performance.now();
+  container.querySelectorAll(".lb-score[data-new-score]").forEach(el => {
+    const from = parseInt(el.textContent, 10);
+    const to = parseInt(el.dataset.newScore, 10);
+    if (from === to) return;
+    function tick(now) {
+      const t = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3); // ease-out cubic
+      el.textContent = Math.round(from + (to - from) * eased);
+      if (t < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
   });
 }
 
