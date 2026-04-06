@@ -778,9 +778,8 @@ function listenToGameState() {
         if (!playerAnswered) {
           // Didn't answer in time
           showScreen("screen-player-timesup");
-        } else if (!playerConfidenceChosen) {
-          showPlayerConfidence(data);
         }
+        // Players who answered are already on the confidence screen
       } else if (data.phase === "results") {
         clearInterval(confTimerInterval);
         showPlayerResults(data);
@@ -861,6 +860,9 @@ document.querySelectorAll(".choice-btn").forEach(btn => {
     await db.collection("games").doc(gamePin).collection("players").doc(playerName).update({
       currentAnswer: choice
     });
+
+    // Go straight to confidence — don't wait for everyone else to answer
+    showPlayerConfidence(null);
   });
 });
 
@@ -884,8 +886,8 @@ function showPlayerConfidence(gameData) {
   const el = document.getElementById("confidence-countdown");
   el.textContent = remaining;
 
-  // Sync with server timestamp
-  if (gameData.confidenceStartedAt && gameData.confidenceStartedAt.seconds) {
+  // Sync with server timestamp if the confidence phase has already started
+  if (gameData && gameData.confidenceStartedAt && gameData.confidenceStartedAt.seconds) {
     const elapsed = Date.now() / 1000 - gameData.confidenceStartedAt.seconds;
     remaining = Math.max(0, Math.ceil(10 - elapsed));
     el.textContent = remaining;
