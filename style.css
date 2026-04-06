@@ -299,6 +299,11 @@ body {
   font-weight: 600;
   animation: popIn 0.3s ease;
 }
+.player-chip.player-chip-me {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
 @keyframes popIn {
   from { transform: scale(0.7); opacity: 0; }
   to { transform: scale(1); opacity: 1; }

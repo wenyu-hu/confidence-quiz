@@ -346,7 +346,7 @@ function renderPlayerList(players) {
     pListEl.innerHTML = "";
     players.forEach(p => {
       const chip = document.createElement("span");
-      chip.className = "player-chip";
+      chip.className = "player-chip" + (playerName && p.name === playerName ? " player-chip-me" : "");
       chip.textContent = p.name;
       pListEl.appendChild(chip);
     });
@@ -1021,7 +1021,12 @@ async function showEndGame() {
     const el = document.getElementById(`podium-${place}`);
     const p = players[place - 1];
     if (p) {
-      el.querySelector(".podium-name").textContent = p.name;
+      const nameEl = el.querySelector(".podium-name");
+      if (playerName && p.name === playerName) {
+        nameEl.innerHTML = "<strong>You</strong>";
+      } else {
+        nameEl.textContent = p.name;
+      }
       el.querySelector(".podium-score").textContent = `${p.score || 0} pts`;
       el.classList.remove("hidden");
     } else {
