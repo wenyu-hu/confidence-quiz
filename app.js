@@ -663,7 +663,7 @@ function renderLeaderboard(players, containerId, highlightName = null) {
   }
 
   // Score count-up animation
-  const duration = 1400;
+  const duration = 2200;
   const startTime = performance.now();
   container.querySelectorAll(".lb-score[data-new-score]").forEach(el => {
     const from = parseInt(el.textContent, 10);
